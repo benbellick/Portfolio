@@ -14,43 +14,59 @@ data Options = Options
     optConfigPath :: FilePath
   }
 
+data ConfigCommand = Show | Set
 data Argument = Buy Double
               | Sell Double
               | Rebalance
-              | ShowConfig
-              | SetConfig
-              deriving (Show, Read)
+              | Configure ConfigCommand
 
 opts :: Parser Options
-opts = Options <$> commandParser <*> configPathParser
+opts = Options <$> argumentParser <*> configPathParser
 
-commandParser :: Parser Argument
-commandParser = argument auto (metavar "COMMAND")
+argumentParser :: Parser Argument
+argumentParser = subparser
+                 (  command "buy" (info buyCommand (progDesc "buy a specific value of target portfolio"))
+                 <> command "sell" (info sellCommand (progDesc "sell a specific value of target portfolio"))
+                 <> command "rebalance" (info rebalanceCommand (progDesc "rebalance portfolio"))
+                 <> command "config" (info configCommand (progDesc ("configure")))
+                 )
+buyCommand, sellCommand, rebalanceCommand, configCommand, configShowCommand, configSetCommand :: Parser Argument
+buyCommand = fmap Buy (argument auto (metavar "AMT"))
+sellCommand = fmap Sell (argument auto (metavar "AMT"))
+rebalanceCommand = pure Rebalance
+configCommand = subparser
+                (  command "show" (info configShowCommand (progDesc "show current configuration"))
+                <> command "set" (info configSetCommand (progDesc "set new configuration"))
+                )
+configShowCommand = pure (Configure Show)
+configSetCommand = pure (Configure Set)
 
 configPathParser :: Parser FilePath
 configPathParser = strOption
   ( long "config" <> short 'c' <> help "File path for config file" <> value "./.config.json")
-
+{-
 processOptions :: Options -> IO ()
 processOptions Options{optArgument=Buy amt, optConfigPath} = do {mconf <- readConfig optConfigPath
                                                                 ; case mconf of
                                                                     Just Config{targetPortfolio, margin} -> putStrLn . show $ amt *^ targetPortfolio
                                                              }
+
 processOptions Options{optArgument=Sell amt, optConfigPath} = do { mconf <- readConfig optConfigPath
                                                             ; case mconf of
                                                                 Just Config{targetPortfolio, margin} -> putStrLn . show $ neg $ amt *^ targetPortfolio
                                                             }
---processOptions Options{optArgument=Rebalance , optConfigPath} = _
+processOptions Options{optArgument=Rebalance , optConfigPath} = _
 processOptions Options{optArgument=ShowConfig, optConfigPath} = do {mconf <- readConfig optConfigPath
                                                                    ; case mconf of
                                                                        Just conf -> B.putStrLn . encodePretty $  conf
                                                                        Nothing -> print "Config not found"
                                                                    }
 processOptions Options{optArgument=SetConfig, optConfigPath} = do {conf <- promptConfig; writeConfig optConfigPath conf}
-
+-}
 main :: IO ()
 main = do { options <- execParser (info opts ( fullDesc
                                       <> progDesc "Compute investment purchases for target portfolio"
                                       <> header "hello - a test for optparse-applicative" ))
-          ; processOptions options
+          --; processOptions options
+          ; putStrLn "not implemented"
           }
