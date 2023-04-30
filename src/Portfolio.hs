@@ -28,7 +28,8 @@ instance Show Portfolio where
           showQuant Percent v = "%" ++ show v
 
 (*^) :: Double -> Portfolio -> Portfolio
-(*^) n (Portfolio m q) = Portfolio  ((*n) <$> m) q
+(*^) n (Portfolio m Percent) = Portfolio  ((*(n/100)) <$> m) Dollar
+(*^) n (Portfolio m Dollar) = Portfolio  ((*n) <$> m) Dollar
 
 valuation :: Portfolio -> Double
 valuation (Portfolio m _) = foldr (+) 0 m
