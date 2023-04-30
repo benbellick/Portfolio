@@ -27,11 +27,11 @@ argumentParser = subparser
                  (  command "buy" (info buyCommand (progDesc "buy a specific value of target portfolio"))
                  <> command "sell" (info sellCommand (progDesc "sell a specific value of target portfolio"))
                  <> command "rebalance" (info rebalanceCommand (progDesc "rebalance portfolio"))
-                 <> command "config" (info configCommand (progDesc ("configure")))
+                 <> command "config" (info configCommand (progDesc "configure"))
                  )
 buyCommand, sellCommand, rebalanceCommand, configCommand, configShowCommand, configSetCommand :: Parser Argument
-buyCommand = fmap Buy (argument auto (metavar "AMT"))
-sellCommand = fmap Sell (argument auto (metavar "AMT"))
+buyCommand = Buy <$> argument auto (metavar "AMT")
+sellCommand = Sell <$> argument auto (metavar "AMT")
 rebalanceCommand = pure Rebalance
 configCommand = subparser
                 (  command "show" (info configShowCommand (progDesc "show current configuration"))
@@ -47,12 +47,12 @@ configPathParser = strOption
 processOptions :: Options -> IO ()
 processOptions Options{optArgument=Buy amt, optConfigPath} = do {mconf <- readConfig optConfigPath
                                                                 ; case mconf of
-                                                                    Just Config{targetPortfolio, margin} -> putStrLn . show $ amt *^ targetPortfolio
+                                                                    Just Config{targetPortfolio, margin} -> print $ amt *^ targetPortfolio
                                                              }
 
 processOptions Options{optArgument=Sell amt, optConfigPath} = do { mconf <- readConfig optConfigPath
                                                             ; case mconf of
-                                                                Just Config{targetPortfolio, margin} -> putStrLn . show $ neg $ amt *^ targetPortfolio
+                                                                Just Config{targetPortfolio, margin} -> print $ neg $ amt *^ targetPortfolio
                                                             }
 --processOptions Options{optArgument=Rebalance , optConfigPath} = _
 processOptions Options{optArgument=Configure Show, optConfigPath} = do {mconf <- readConfig optConfigPath

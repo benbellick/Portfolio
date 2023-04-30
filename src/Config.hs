@@ -25,9 +25,7 @@ readConfig path = do { str <- B.readFile path
                      }
 
 writeConfig :: FilePath -> Config -> IO ()
-writeConfig path config = do { str <- return $ encode config
-                             ; B.writeFile path str
-                             }
+writeConfig path config = let str = encode config in B.writeFile path str              
 
 promptConfig :: IO Config
 promptConfig = do { putStrLn "Lets make a config"

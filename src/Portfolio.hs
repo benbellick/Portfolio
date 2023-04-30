@@ -32,7 +32,7 @@ instance Show Portfolio where
 (*^) n (Portfolio m Dollar) = Portfolio  ((*n) <$> m) Dollar
 
 valuation :: Portfolio -> Double
-valuation (Portfolio m _) = foldr (+) 0 m
+valuation (Portfolio m _) = sum m
 
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
 (+^) (Portfolio m1 q1) (Portfolio m2 q2)
@@ -41,4 +41,4 @@ valuation (Portfolio m _) = foldr (+) 0 m
 (-^) p1 p2 = (+^) p1 $ neg p2
 
 neg :: Portfolio -> Portfolio
-neg (Portfolio m q) = Portfolio (fmap (* (-1)) m) q
+neg (Portfolio m q) = Portfolio ((* (-1)) <$> m) q
