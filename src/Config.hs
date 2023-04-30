@@ -6,7 +6,7 @@ module Config(
   readConfig,
   writeConfig,
   promptConfig
-  )where
+  ) where
 import Portfolio
 import qualified Data.ByteString.Lazy as B
 import Data.Aeson
@@ -37,9 +37,9 @@ promptConfig = do { putStrLn "Lets make a config"
                   }
 
 promptTargetPortfolio :: IO Portfolio
-promptTargetPortfolio = do { putStrLn "Enter target portfolio"
+promptTargetPortfolio = do { putStrLn "Enter portfolio (in percentages):"
                            ; tickerPercentPair <- promptTickerPercentPair
-                           ; return . Portfolio $ Map.fromList tickerPercentPair
+                           ; return $ Portfolio (Map.fromList tickerPercentPair) Percent
                            }
   
 promptTickerPercentPair :: IO [(String, Double)]

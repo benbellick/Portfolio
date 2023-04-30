@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 module Portfolio
     ( Portfolio(..),
+      Quantity(..),
       (*^),
       (+^),
       (-^),
@@ -11,23 +12,32 @@ module Portfolio
 import GHC.Generics
 import Data.Aeson
 import qualified Data.Map as Map
---do we want the constructor exposed?
-newtype Portfolio = Portfolio(Map.Map String Double) deriving (Generic, ToJSON, FromJSON)
+data Quantity = Dollar | Percent deriving (Eq, Generic, ToJSON, FromJSON)
+  
+--Record so that we can use auto deriving
+data Portfolio = Portfolio
+  { portfolio :: Map.Map String Double
+  , unit :: Quantity
+  } deriving (Generic, ToJSON, FromJSON)
 
 instance Show Portfolio where
-  show (Portfolio m) = Map.foldrWithKey stringify "" m
-    where stringify k v "" = k ++ ": " ++ show v
-          stringify k v str = k ++ ": " ++ show v ++ "\n" ++ str
+  show (Portfolio m q) = Map.foldrWithKey stringify "" m
+    where stringify k v "" = k ++ ": " ++ showQuant q v
+          stringify k v str = k ++ ": " ++ showQuant q v ++ "\n" ++ str
+          showQuant Dollar v = "$" ++ show v
+          showQuant Percent v = "%" ++ show v
 
 (*^) :: Double -> Portfolio -> Portfolio
-(*^) n (Portfolio m) = Portfolio $ (*n) <$> m
+(*^) n (Portfolio m q) = Portfolio  ((*n) <$> m) q
 
 valuation :: Portfolio -> Double
-valuation (Portfolio m) = foldr (+) 0 m
+valuation (Portfolio m _) = foldr (+) 0 m
 
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
-(+^) (Portfolio m1) (Portfolio m2) = Portfolio $ Map.unionWith (+) m1 m2
+(+^) (Portfolio m1 q1) (Portfolio m2 q2)
+  | q1 == q2 = Portfolio  (Map.unionWith (+) m1 m2) q1
+  | otherwise = error "Cannot sum $ portfolio with % portfolio"
 (-^) p1 p2 = (+^) p1 $ neg p2
 
 neg :: Portfolio -> Portfolio
-neg (Portfolio m) = Portfolio $ fmap (* (-1)) m
+neg (Portfolio m q) = Portfolio (fmap (* (-1)) m) q
