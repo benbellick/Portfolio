@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Config(
+  Config(..),
   readConfig,
   writeConfig,
   promptConfig
@@ -38,7 +39,7 @@ promptConfig = do { putStrLn "Lets make a config"
 promptTargetPortfolio :: IO Portfolio
 promptTargetPortfolio = do { putStrLn "Enter target portfolio"
                            ; tickerPercentPair <- promptTickerPercentPair
-                           ; return $ Map.fromList tickerPercentPair
+                           ; return . Portfolio $ Map.fromList tickerPercentPair
                            }
   
 promptTickerPercentPair :: IO [(String, Double)]

@@ -1,44 +1,56 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Main (main) where
 
-import qualified Portfolio as P
+import Portfolio
 import qualified Data.Map as Data.Map
 import qualified Data.Aeson as JSON
+import Data.Aeson.Encode.Pretty (encodePretty)
 import Options.Applicative
 import qualified Data.ByteString.Lazy.Char8 as B
 import Config
 
-
-targetPortfolio :: P.Portfolio
-targetPortfolio = Data.Map.fromList [("VTI", 0.40),("AVUV", 0.20),("VXUS", 0.27),("AVDV", 0.13)]
-
-buyAmt :: Parser Double
-buyAmt = option auto
-         ( long "purchase quantity"
-        <> short 'p'
-        <> help "amount desired of purchase" )
-
-margin :: Parser Double
-margin = option auto
-         ( long "margin amount"
-        <> short 'm'
-        <> help "margin position size"
-        <> showDefault 
-        <> value 0)
-
 data Options = Options
-    { optBuyAmt :: Double
-    , optMargin :: Double }
+  { optArgument :: Argument,
+    optConfigPath :: FilePath
+  }
+
+data Argument = Buy Double
+              | Sell Double
+              | Rebalance
+              | ShowConfig
+              | SetConfig
+              deriving (Show, Read)
 
 opts :: Parser Options
-opts = Options <$> buyAmt <*> margin
+opts = Options <$> commandParser <*> configPathParser
+
+commandParser :: Parser Argument
+commandParser = argument auto (metavar "COMMAND")
+
+configPathParser :: Parser FilePath
+configPathParser = strOption
+  ( long "config" <> short 'c' <> help "File path for config file" <> value "./.config.json")
+
+processOptions :: Options -> IO ()
+processOptions Options{optArgument=Buy amt, optConfigPath} = do {mconf <- readConfig optConfigPath
+                                                                ; case mconf of
+                                                                    Just Config{targetPortfolio, margin} -> putStrLn . show $ amt *^ targetPortfolio
+                                                             }
+processOptions Options{optArgument=Sell amt, optConfigPath} = do { mconf <- readConfig optConfigPath
+                                                            ; case mconf of
+                                                                Just Config{targetPortfolio, margin} -> putStrLn . show $ neg $ amt *^ targetPortfolio
+                                                            }
+--processOptions Options{optArgument=Rebalance , optConfigPath} = _
+processOptions Options{optArgument=ShowConfig, optConfigPath} = do {mconf <- readConfig optConfigPath
+                                                                   ; case mconf of
+                                                                       Just conf -> B.putStrLn . encodePretty $  conf
+                                                                       Nothing -> print "Config not found"
+                                                                   }
+processOptions Options{optArgument=SetConfig, optConfigPath} = do {conf <- promptConfig; writeConfig optConfigPath conf}
 
 main :: IO ()
-main = do
-    c <- promptConfig
-    options <- execParser (info opts ( fullDesc
+main = do { options <- execParser (info opts ( fullDesc
                                       <> progDesc "Compute investment purchases for target portfolio"
                                       <> header "hello - a test for optparse-applicative" ))
-    B.putStrLn (JSON.encode (purchaseSuggestion options targetPortfolio))
-
-purchaseSuggestion :: Options -> P.Portfolio -> P.Portfolio
-purchaseSuggestion o p = (optBuyAmt o * (1 + optMargin o)) P.*^ p
+          ; processOptions options
+          }

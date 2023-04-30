@@ -24,6 +24,7 @@ dependencies:
 - containers
 - optparse-applicative
 - aeson
+- aeson-pretty
 - bytestring
 
 ghc-options:

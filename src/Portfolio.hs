@@ -1,25 +1,33 @@
+{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE DeriveAnyClass #-}
 module Portfolio
-    ( Portfolio,
+    ( Portfolio(..),
       (*^),
       (+^),
       (-^),
-      value
+      valuation,
+      neg
     ) where
-
+import GHC.Generics
+import Data.Aeson
 import qualified Data.Map as Map
+--do we want the constructor exposed?
+newtype Portfolio = Portfolio(Map.Map String Double) deriving (Generic, ToJSON, FromJSON)
 
-type Portfolio = Map.Map String Double
+instance Show Portfolio where
+  show (Portfolio m) = Map.foldrWithKey stringify "" m
+    where stringify k v "" = k ++ ": " ++ show v
+          stringify k v str = k ++ ": " ++ show v ++ "\n" ++ str
 
 (*^) :: Double -> Portfolio -> Portfolio
-(*^) n p = (*n) <$> p
+(*^) n (Portfolio m) = Portfolio $ (*n) <$> m
 
-value :: Portfolio -> Double
-value p = foldr (+) 0 p
+valuation :: Portfolio -> Double
+valuation (Portfolio m) = foldr (+) 0 m
 
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
-(+^) = Map.unionWith (+)
+(+^) (Portfolio m1) (Portfolio m2) = Portfolio $ Map.unionWith (+) m1 m2
 (-^) p1 p2 = (+^) p1 $ neg p2
 
 neg :: Portfolio -> Portfolio
-neg = fmap (* (-1))
-
+neg (Portfolio m) = Portfolio $ fmap (* (-1)) m
