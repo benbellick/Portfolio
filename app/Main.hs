@@ -46,14 +46,13 @@ configPathParser = strOption
   ( long "config" <> short 'c' <> help "File path for config file" <> value "./.config.json")
 
 processOptions :: Options -> MaybeT IO ()
-processOptions Options{optArgument=Buy amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ amt *^ targetPortfolio
-processOptions Options{optArgument=Sell amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ neg $ amt *^ targetPortfolio
+--TODO What happens when the config isn't found?
 processOptions Options{optArgument=Rebalance} = error "Rebalance not yet implemented"
---TODO: Do something when config not found (MaybeT implicitly hides that control path)
-processOptions Options{optArgument=Configure Show, optConfigPath} = readConfig optConfigPath >>= lift . B.putStrLn . encodePretty
 processOptions Options{optArgument=Configure Set, optConfigPath} = lift $ promptConfig >>= writeConfig optConfigPath
-
-
+processOptions Options{optArgument=arg, optConfigPath} = readConfig optConfigPath >>= lift . case arg of
+                                                                                        Buy amt-> \Config{targetPortfolio} ->  print $ amt *^ targetPortfolio 
+                                                                                        Sell amt-> \Config{targetPortfolio} ->  print $ neg $ amt *^ targetPortfolio
+                                                                                        Configure Show ->  B.putStrLn . encodePretty
 main :: IO ()
 main = do { options <- execParser (info opts ( fullDesc
                                       <> progDesc "Compute investment purchases for target portfolio"
@@ -63,4 +62,3 @@ main = do { options <- execParser (info opts ( fullDesc
               Nothing -> "Error" --surely this can be better
               Just _ -> ""
           }
-

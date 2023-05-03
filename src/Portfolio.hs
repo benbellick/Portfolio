@@ -12,7 +12,6 @@ module Portfolio
     ) where
 import GHC.Generics
 import Data.Aeson
-import Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 data Quantity = Dollar | Percent deriving (Eq, Generic, ToJSON, FromJSON)
 -- Below type would be nice down the line, but then we have to implement our own To/FromJSON instances..
