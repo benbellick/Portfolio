@@ -2,7 +2,6 @@
 module Main (main) where
 
 import Portfolio
-import qualified Data.Aeson as JSON
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Options.Applicative
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -49,8 +48,7 @@ configPathParser = strOption
 processOptions :: Options -> MaybeT IO ()
 processOptions Options{optArgument=Buy amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ amt *^ targetPortfolio
 processOptions Options{optArgument=Sell amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ neg $ amt *^ targetPortfolio
-
---processOptions Options{optArgument=Rebalance , optConfigPath} = _
+processOptions Options{optArgument=Rebalance} = error "Rebalance not yet implemented"
 --TODO: Do something when config not found (MaybeT implicitly hides that control path)
 processOptions Options{optArgument=Configure Show, optConfigPath} = readConfig optConfigPath >>= lift . B.putStrLn . encodePretty
 processOptions Options{optArgument=Configure Set, optConfigPath} = lift $ promptConfig >>= writeConfig optConfigPath

@@ -41,7 +41,7 @@ valid, validDebt :: Portfolio -> Bool
 valid p@(Portfolio _ Percent) = valuation p == 100 && validDebt p 
 valid p@(Portfolio _ Dollar)  = validDebt p
 
-validDebt (Portfolio m _) = fromMaybe True ((<=0) <$> Map.lookup "DEBT" m) 
+validDebt (Portfolio m _) = maybe True (<=0) (Map.lookup "DEBT" m) 
 
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
 (+^) (Portfolio m1 q1) (Portfolio m2 q2)
