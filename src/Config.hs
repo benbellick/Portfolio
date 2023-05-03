@@ -52,7 +52,7 @@ promptTickerPercentPair q = do { putStrLn "Ticker:"
                                  "" -> return []
                                  _ -> do { putStrLn $ case q of
                                             Percent -> "%:"
-                                            Dollar -> "$"
+                                            Dollar  -> "$:"
                                         ; percent <- readLn :: IO Double
                                         ; p <- promptTickerPercentPair q
                                         ; return $ (ticker,percent):p
