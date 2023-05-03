@@ -26,6 +26,7 @@ dependencies:
 - aeson
 - aeson-pretty
 - bytestring
+- transformers
 
 ghc-options:
 - -Wall

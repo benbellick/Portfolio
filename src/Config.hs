@@ -20,9 +20,7 @@ data Config = Config
   deriving (Show, Generic, ToJSON, FromJSON)
 
 readConfig :: FilePath -> IO (Maybe Config)
-readConfig path = do { str <- B.readFile path
-                     ; return $ decode str
-                     }
+readConfig path =  B.readFile path >>= return . decode
 
 writeConfig :: FilePath -> Config -> IO ()
 writeConfig path config = let str = encode config in B.writeFile path str              

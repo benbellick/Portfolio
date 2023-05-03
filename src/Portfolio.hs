@@ -1,22 +1,25 @@
 {-# LANGUAGE DeriveGeneric  #-}
 {-# LANGUAGE DeriveAnyClass #-}
 module Portfolio
-    ( Portfolio(..),
+    ( Portfolio(..),--TODO: hide this implementation
       Quantity(..),
       (*^),
       (+^),
       (-^),
       valuation,
-      neg
+      neg,
+      valid
     ) where
 import GHC.Generics
 import Data.Aeson
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 data Quantity = Dollar | Percent deriving (Eq, Generic, ToJSON, FromJSON)
-  
+-- Below type would be nice down the line, but then we have to implement our own To/FromJSON instances..
+--data Item = Ticker String | Cash | Debt
 --Record so that we can use auto deriving
 data Portfolio = Portfolio
-  { portfolio :: Map.Map String Double
+  { portfolio :: Map.Map String Double -- This may contain special keyword DEBT which should be negative
   , unit :: Quantity
   } deriving (Generic, ToJSON, FromJSON)
 
@@ -33,6 +36,12 @@ instance Show Portfolio where
 
 valuation :: Portfolio -> Double
 valuation (Portfolio m _) = sum m
+
+valid, validDebt :: Portfolio -> Bool
+valid p@(Portfolio _ Percent) = valuation p == 100 && validDebt p 
+valid p@(Portfolio _ Dollar)  = validDebt p
+
+validDebt (Portfolio m _) = fromMaybe True ((<=0) <$> Map.lookup "DEBT" m) 
 
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
 (+^) (Portfolio m1 q1) (Portfolio m2 q2)

@@ -40,6 +40,7 @@ library
     , bytestring
     , containers
     , optparse-applicative
+    , transformers
   default-language: Haskell2010
 
 executable Portfolio-exe
@@ -57,6 +58,7 @@ executable Portfolio-exe
     , bytestring
     , containers
     , optparse-applicative
+    , transformers
   default-language: Haskell2010
 
 test-suite Portfolio-test
@@ -75,4 +77,5 @@ test-suite Portfolio-test
     , bytestring
     , containers
     , optparse-applicative
+    , transformers
   default-language: Haskell2010
