@@ -1,16 +1,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Main (main) where
 
-import Portfolio
-import Data.Aeson.Encode.Pretty (encodePretty)
-import Options.Applicative
+import           Config
+import           Control.Monad.Trans.Class  (lift)
+import           Control.Monad.Trans.Maybe
+import           Data.Aeson.Encode.Pretty   (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as B
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.Class (lift)
-import Config
+import           Options.Applicative
+import           Portfolio
 
 data Options = Options
-  { optArgument :: Argument,
+  { optArgument   :: Argument,
     optConfigPath :: FilePath
   }
 
@@ -50,7 +50,7 @@ processOptions :: Options -> MaybeT IO ()
 processOptions Options{optArgument=Rebalance} = error "Rebalance not yet implemented"
 processOptions Options{optArgument=Configure Set, optConfigPath} = lift $ promptConfig >>= writeConfig optConfigPath
 processOptions Options{optArgument=arg, optConfigPath} = readConfig optConfigPath >>= lift . case arg of
-                                                                                        Buy amt-> \Config{targetPortfolio} ->  print $ amt *^ targetPortfolio 
+                                                                                        Buy amt-> \Config{targetPortfolio} ->  print $ amt *^ targetPortfolio
                                                                                         Sell amt-> \Config{targetPortfolio} ->  print $ neg $ amt *^ targetPortfolio
                                                                                         Configure Show ->  B.putStrLn . encodePretty
 main :: IO ()
@@ -60,5 +60,5 @@ main = do { options <- execParser (info opts ( fullDesc
           ; mResult <- runMaybeT $ processOptions options
           ; putStrLn $ case mResult of
               Nothing -> "Error" --surely this can be better
-              Just _ -> ""
+              Just _  -> ""
           }

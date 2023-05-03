@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveGeneric  #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Config(
   Config(..),
@@ -7,17 +7,17 @@ module Config(
   writeConfig,
   promptConfig
   ) where
-import Portfolio
-import qualified Data.ByteString.Lazy as B
-import Data.Aeson
-import GHC.Generics
-import qualified Data.Map as Map
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Maybe
+import           Data.Aeson
+import qualified Data.ByteString.Lazy      as B
+import qualified Data.Map                  as Map
+import           GHC.Generics
+import           Portfolio
 
 data Config = Config
   { targetPortfolio :: Portfolio
-  , margin :: Double
+  , margin          :: Double
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -26,7 +26,7 @@ readConfig :: FilePath -> MaybeT IO Config
 readConfig path = lift (B.readFile path) >>= MaybeT . pure . decode
 
 writeConfig :: FilePath -> Config -> IO ()
-writeConfig path config = let str = encode config in B.writeFile path str              
+writeConfig path config = let str = encode config in B.writeFile path str
 
 promptConfig :: IO Config
 promptConfig = do { putStrLn "Lets make a config"
@@ -40,7 +40,7 @@ promptTargetPortfolio = do { putStrLn "Enter portfolio (in percentages):"
                            ; tickerPercentPair <- promptTickerPercentPair
                            ; return $ Portfolio (Map.fromList tickerPercentPair) Percent
                            }
-  
+
 promptTickerPercentPair :: IO [(String, Double)]
 promptTickerPercentPair = do { putStrLn "Ticker:"
                              ; ticker <- getLine
@@ -52,7 +52,7 @@ promptTickerPercentPair = do { putStrLn "Ticker:"
                                         ; return $ (ticker,percent):p
                                         }
                              }
-    
+
 promptMargin :: IO Double
 promptMargin = do { putStrLn "Would you like to include margin? Enter nothing for no"
                   ; marginStr <- getLine
