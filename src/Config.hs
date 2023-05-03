@@ -12,6 +12,8 @@ import qualified Data.ByteString.Lazy as B
 import Data.Aeson
 import GHC.Generics
 import qualified Data.Map as Map
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Class (lift)
 
 data Config = Config
   { targetPortfolio :: Portfolio
@@ -19,8 +21,9 @@ data Config = Config
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-readConfig :: FilePath -> IO (Maybe Config)
-readConfig path =  B.readFile path >>= return . decode
+readConfig :: FilePath -> MaybeT IO Config
+--TODO : when transformers upgrades to 0.6, replace (MaybeT . pure) with hoistMabe when upgrading transformers to >=0.6
+readConfig path = lift (B.readFile path) >>= MaybeT . pure . decode
 
 writeConfig :: FilePath -> Config -> IO ()
 writeConfig path config = let str = encode config in B.writeFile path str              

@@ -6,6 +6,8 @@ import qualified Data.Aeson as JSON
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Options.Applicative
 import qualified Data.ByteString.Lazy.Char8 as B
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Class (lift)
 import Config
 
 data Options = Options
@@ -44,27 +46,23 @@ configPathParser :: Parser FilePath
 configPathParser = strOption
   ( long "config" <> short 'c' <> help "File path for config file" <> value "./.config.json")
 
-processOptions :: Options -> IO ()
-processOptions Options{optArgument=Buy amt, optConfigPath} = do {mconf <- readConfig optConfigPath
-                                                                ; case mconf of
-                                                                    Just Config{targetPortfolio, margin} -> print $ amt *^ targetPortfolio
-                                                             }
+processOptions :: Options -> MaybeT IO ()
+processOptions Options{optArgument=Buy amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ amt *^ targetPortfolio
+processOptions Options{optArgument=Sell amt, optConfigPath} = readConfig optConfigPath >>= \Config{targetPortfolio} -> lift . print $ neg $ amt *^ targetPortfolio
 
-processOptions Options{optArgument=Sell amt, optConfigPath} = do { mconf <- readConfig optConfigPath
-                                                            ; case mconf of
-                                                                Just Config{targetPortfolio, margin} -> print $ neg $ amt *^ targetPortfolio
-                                                            }
 --processOptions Options{optArgument=Rebalance , optConfigPath} = _
-processOptions Options{optArgument=Configure Show, optConfigPath} = do {mconf <- readConfig optConfigPath
-                                                                   ; case mconf of
-                                                                       Just conf -> B.putStrLn . encodePretty $  conf
-                                                                       Nothing -> print "Config not found"
-                                                                   }
-processOptions Options{optArgument=Configure Set, optConfigPath} = do {conf <- promptConfig; writeConfig optConfigPath conf}
+--TODO: Do something when config not found (MaybeT implicitly hides that control path)
+processOptions Options{optArgument=Configure Show, optConfigPath} = readConfig optConfigPath >>= lift . B.putStrLn . encodePretty
+processOptions Options{optArgument=Configure Set, optConfigPath} = lift $ promptConfig >>= writeConfig optConfigPath
+
 
 main :: IO ()
 main = do { options <- execParser (info opts ( fullDesc
                                       <> progDesc "Compute investment purchases for target portfolio"
                                       <> header "hello - a test for optparse-applicative" ))
-          ; processOptions options
+          ; mResult <- runMaybeT $ processOptions options
+          ; putStrLn $ case mResult of
+              Nothing -> "Error" --surely this can be better
+              Just _ -> ""
           }
+
