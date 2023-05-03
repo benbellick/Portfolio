@@ -26,8 +26,12 @@ instance Show Portfolio where
   show (Portfolio m q) = Map.foldrWithKey stringify "" m
     where stringify k v ""  = k ++ ": " ++ showQuant q v
           stringify k v str = k ++ ": " ++ showQuant q v ++ "\n" ++ str
-          showQuant Dollar v  = "$" ++ show v
-          showQuant Percent v = "%" ++ show v
+          showQuant Dollar v
+            | v >= 0 = "$" ++ show v
+            | otherwise = "($" ++ show (-v) ++ ")"
+          showQuant Percent v
+            | v >= 0 = "%" ++ show v
+            | otherwise = "(%" ++ show (-v) ++ ")"
 
 (*^) :: Double -> Portfolio -> Portfolio
 (*^) n (Portfolio m Percent) = Portfolio  ((*(n/100)) <$> m) Dollar
