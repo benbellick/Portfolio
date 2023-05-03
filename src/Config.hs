@@ -5,6 +5,7 @@ module Config(
   Config(..),
   readConfig,
   writeConfig,
+  promptPortfolio,
   promptConfig
   ) where
 import           Control.Monad.Trans.Class (lift)
@@ -30,25 +31,30 @@ writeConfig path config = let str = encode config in B.writeFile path str
 
 promptConfig :: IO Config
 promptConfig = do { putStrLn "Lets make a config"
-                  ; targetPortfolio <- promptTargetPortfolio
+                  ; targetPortfolio <- promptPortfolio Percent
                   ; margin <- promptMargin
                   ; return Config{targetPortfolio, margin}
                   }
 
-promptTargetPortfolio :: IO Portfolio
-promptTargetPortfolio = do { putStrLn "Enter portfolio (in percentages):"
-                           ; tickerPercentPair <- promptTickerPercentPair
-                           ; return $ Portfolio (Map.fromList tickerPercentPair) Percent
+promptPortfolio :: Quantity -> IO Portfolio
+promptPortfolio q = do { putStrLn ("Enter portfolio (in " ++ show q ++ "):")
+                           ; tickerPercentPair <- promptTickerPercentPair q
+                           ; return $ case q of
+                               Percent -> Portfolio (Map.fromList (convertNumToPercent tickerPercentPair)) q
+                               Dollar -> Portfolio (Map.fromList tickerPercentPair) q
                            }
+  where convertNumToPercent = map (fmap (/100))
 
-promptTickerPercentPair :: IO [(String, Double)]
-promptTickerPercentPair = do { putStrLn "Ticker:"
+promptTickerPercentPair :: Quantity -> IO [(String, Double)]
+promptTickerPercentPair q = do { putStrLn "Ticker:"
                              ; ticker <- getLine
                              ; case ticker of
                                  "" -> return []
-                                 _ -> do { putStrLn "Percent:"
+                                 _ -> do { putStrLn $ case q of
+                                            Percent -> "%:"
+                                            Dollar -> "$"
                                         ; percent <- readLn :: IO Double
-                                        ; p <- promptTickerPercentPair
+                                        ; p <- promptTickerPercentPair q
                                         ; return $ (ticker,percent):p
                                         }
                              }

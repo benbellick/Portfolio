@@ -7,13 +7,14 @@ module Portfolio
       (+^),
       (-^),
       valuation,
+      rebalance,
       neg,
       valid
     ) where
 import           Data.Aeson
 import qualified Data.Map     as Map
 import           GHC.Generics
-data Quantity = Dollar | Percent deriving (Eq, Generic, ToJSON, FromJSON)
+data Quantity = Dollar | Percent deriving (Show, Eq, Generic, ToJSON, FromJSON)
 -- Below type would be nice down the line, but then we have to implement our own To/FromJSON instances..
 --data Item = Ticker String | Cash | Debt
 --Record so that we can use auto deriving
@@ -49,8 +50,12 @@ validDebt (Portfolio m _) = maybe True (<=0) (Map.lookup "DEBT" m)
 (+^), (-^) :: Portfolio -> Portfolio -> Portfolio
 (+^) (Portfolio m1 q1) (Portfolio m2 q2)
   | q1 == q2 = Portfolio  (Map.unionWith (+) m1 m2) q1
-  | otherwise = error "Cannot sum $ portfolio with % portfolio"
+  | otherwise = error "Cannot sum/subtract $ portfolio with % portfolio"
 (-^) p1 p2 = (+^) p1 $ neg p2
 
 neg :: Portfolio -> Portfolio
 neg (Portfolio m q) = Portfolio ((* (-1)) <$> m) q
+
+rebalance :: Portfolio -> Portfolio -> Portfolio
+rebalance current@(Portfolio _ Dollar) target@(Portfolio _ Percent) = (valuation current *^ target) -^ current
+rebalance _ _ = error "it only makes sense to rebalance a portfolio in $ to target a specific set of %s. Report to developer"

@@ -47,7 +47,11 @@ configPathParser = strOption
 
 processOptions :: Options -> MaybeT IO ()
 --TODO What happens when the config isn't found?
-processOptions Options{optArgument=Rebalance} = error "Rebalance not yet implemented"
+processOptions Options{optArgument=Rebalance, optConfigPath} = do { conf <- readConfig optConfigPath
+                                                   ; curPort <- lift $ promptPortfolio Dollar
+                                                   ; sugDiff <- return (rebalance curPort (targetPortfolio conf))
+                                                   ; lift $ print sugDiff
+                                                   }
 processOptions Options{optArgument=Configure Set, optConfigPath} = lift $ promptConfig >>= writeConfig optConfigPath
 processOptions Options{optArgument=arg, optConfigPath} = readConfig optConfigPath >>= lift . case arg of
                                                                                         Buy amt-> \Config{targetPortfolio} ->  print $ amt *^ targetPortfolio
