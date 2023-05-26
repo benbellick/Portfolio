@@ -3,10 +3,13 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Config(
   Config(..),
+  PortfolioConfig(..),
   readConfig,
   writeConfig,
   promptPortfolio,
-  promptConfig
+  promptNewConfig,
+  promptUpdateConfig,
+  getPortfolioByName
   ) where
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Maybe
@@ -16,11 +19,15 @@ import qualified Data.Map                  as Map
 import           GHC.Generics
 import           Portfolio
 
+data PortfolioConfig = PortfolioConfig
+                       { targetPortfolio :: Portfolio
+                       , margin :: Double
+                       } deriving (Show, Generic, ToJSON, FromJSON)
+
+--TODO add default portfolio
 data Config = Config
-  { targetPortfolio :: Portfolio
-  , margin          :: Double
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  { portfolios :: Map.Map String PortfolioConfig
+  } deriving (Show, Generic, ToJSON, FromJSON)
 
 readConfig :: FilePath -> MaybeT IO Config
 --TODO : when transformers upgrades to 0.6, replace (MaybeT . pure) with hoistMabe when upgrading transformers to >=0.6
@@ -29,12 +36,39 @@ readConfig path = lift (B.readFile path) >>= MaybeT . pure . decode
 writeConfig :: FilePath -> Config -> IO ()
 writeConfig path config = let str = encode config in B.writeFile path str
 
-promptConfig :: IO Config
-promptConfig = do { putStrLn "Lets make a config"
-                  ; targetPortfolio <- promptPortfolio Percent
-                  ; margin <- promptMargin
-                  ; return Config{targetPortfolio, margin}
-                  }
+promptNewConfig :: IO Config
+promptNewConfig = do putStrLn "Lets make a fresh config!"
+                     portName <- promptPortfolioName
+                     portfolio <- promptPortfolioConfig Percent
+                     return $ Config (Map.fromList [(portName, portfolio)])
+
+promptUpdateConfig :: FilePath -> String -> IO Config
+promptUpdateConfig path portfolioName = do putStrLn "Lets update the existing config!"
+                                           putStrLn "Enter the same name as the desired portfolio update"
+                                           confM <- runMaybeT $ readConfig path
+                                           case confM of
+                                             Nothing -> putStrLn "Config not found, preparing fresh one" >> promptNewConfig
+                                             Just conf -> do { portfolioConfig <- promptPortfolioConfig Percent
+                                                            ; return $ updateConfig portfolioName portfolioConfig conf }
+promptPortfolioName :: IO String
+promptPortfolioName = do putStrLn "Enter the name of the portfolio:"
+                         putStrLn "(If no name is entered, \"DEFAULT\" is used)"
+                         name <- getLine
+                         case name of
+                           "" -> return "DEFAULT"
+                           _ -> return name
+                         
+
+updateConfig :: String -> PortfolioConfig -> Config -> Config
+updateConfig portfolioName pc Config{portfolios} = Config{portfolios = Map.insert portfolioName pc portfolios }
+
+                        
+
+promptPortfolioConfig :: Quantity -> IO PortfolioConfig
+promptPortfolioConfig q = do targetPortfolio <- promptPortfolio q
+                             margin <- promptMargin
+                             return $ PortfolioConfig{targetPortfolio, margin}
+
 
 promptPortfolio :: Quantity -> IO Portfolio
 promptPortfolio q = do { putStrLn ("Enter portfolio (in " ++ show q ++ "):")
@@ -66,3 +100,8 @@ promptMargin = do { putStrLn "Would you like to include margin? Enter nothing fo
                       "" -> return 0
                       _  -> return $ read marginStr
                   }
+
+getPortfolioByName :: String -> Config -> Maybe PortfolioConfig
+getPortfolioByName name conf = Map.lookup name (portfolios conf)
+
+
