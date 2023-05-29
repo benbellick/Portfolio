@@ -4,6 +4,7 @@
 module Config(
   Config(..),
   PortfolioConfig(..),
+  PortfolioName,
   readConfig,
   writeConfig,
   promptPortfolio,
@@ -24,9 +25,10 @@ data PortfolioConfig = PortfolioConfig
                        , margin :: Double
                        } deriving (Show, Generic, ToJSON, FromJSON)
 
---TODO add default portfolio
+type PortfolioName = String
 data Config = Config
-  { portfolios :: Map.Map String PortfolioConfig
+  { portfolios :: Map.Map PortfolioName PortfolioConfig
+  , defaultPortfolio :: PortfolioName
   } deriving (Show, Generic, ToJSON, FromJSON)
 
 readConfig :: FilePath -> MaybeT IO Config
@@ -40,8 +42,10 @@ promptNewConfig :: IO Config
 promptNewConfig = do putStrLn "Lets make a fresh config!"
                      portName <- promptPortfolioName
                      portfolio <- promptPortfolioConfig Percent
-                     return $ Config (Map.fromList [(portName, portfolio)])
+                     return $ Config{ portfolios=Map.fromList [(portName, portfolio)],
+                                      defaultPortfolio=portName}
 
+--TODO: Update imple to include update of default portfolio name
 promptUpdateConfig :: FilePath -> String -> IO Config
 promptUpdateConfig path portfolioName = do putStrLn "Lets update the existing config!"
                                            putStrLn "Enter the same name as the desired portfolio update"
@@ -50,7 +54,7 @@ promptUpdateConfig path portfolioName = do putStrLn "Lets update the existing co
                                              Nothing -> putStrLn "Config not found, preparing fresh one" >> promptNewConfig
                                              Just conf -> do { portfolioConfig <- promptPortfolioConfig Percent
                                                             ; return $ updateConfig portfolioName portfolioConfig conf }
-promptPortfolioName :: IO String
+promptPortfolioName :: IO PortfolioName
 promptPortfolioName = do putStrLn "Enter the name of the portfolio:"
                          putStrLn "(If no name is entered, \"DEFAULT\" is used)"
                          name <- getLine
@@ -60,7 +64,7 @@ promptPortfolioName = do putStrLn "Enter the name of the portfolio:"
                          
 
 updateConfig :: String -> PortfolioConfig -> Config -> Config
-updateConfig portfolioName pc Config{portfolios} = Config{portfolios = Map.insert portfolioName pc portfolios }
+updateConfig portfolioName pc c@Config{portfolios} = c{portfolios=Map.insert portfolioName pc portfolios}
 
                         
 
@@ -74,10 +78,9 @@ promptPortfolio :: Quantity -> IO Portfolio
 promptPortfolio q = do { putStrLn ("Enter portfolio (in " ++ show q ++ "):")
                            ; tickerPercentPair <- promptTickerPercentPair q
                            ; return $ case q of
-                               Percent -> Portfolio (Map.fromList (convertNumToPercent tickerPercentPair)) q
+                               Percent -> Portfolio (Map.fromList tickerPercentPair) q
                                Dollar -> Portfolio (Map.fromList tickerPercentPair) q
                            }
-  where convertNumToPercent = map (fmap (/100))
 
 promptTickerPercentPair :: Quantity -> IO [(String, Double)]
 promptTickerPercentPair q = do { putStrLn "Ticker:"

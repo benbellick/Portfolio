@@ -8,6 +8,7 @@ import           Data.Aeson.Encode.Pretty   (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Options.Applicative
 import           Portfolio
+import Data.Char (toUpper)
 
 data Options = Options
   { optArgument   :: Argument,
@@ -21,8 +22,8 @@ data Argument = Buy Double
               | Rebalance
               | Configure ConfigCommand
 
-opts :: Parser Options
-opts = Options <$> argumentParser <*> configPathParser <*> portfolioNameParser
+optsParser :: Parser Options
+optsParser = Options <$> argumentParser <*> configPathParser <*> portfolioNameParser
 
 argumentParser :: Parser Argument
 argumentParser = subparser
@@ -52,31 +53,42 @@ portfolioNameParser :: Parser String
 portfolioNameParser = strOption
   ( long "portfolio-name" <> short 'n' <> help "Name of the portfolio to use / update" <> value "DEFAULT" )--this can be better
 
+handleDefault :: Config -> Options -> PortfolioName
+handleDefault Config{defaultPortfolio} Options{optPortfolioName=optPortfolioName} = case (map toUpper optPortfolioName) of
+  "DEFAULT" -> defaultPortfolio
+  "" -> defaultPortfolio
+  _ -> optPortfolioName
+
 processOptions :: Options -> MaybeT IO ()
-processOptions Options{optArgument=Rebalance, optConfigPath, optPortfolioName} = do conf <- readConfig optConfigPath
-                                                                                    curPort <- lift $ promptPortfolio Dollar
-                                                                                    let targetPortfolioConfM = getPortfolioByName optPortfolioName conf
-                                                                                    case targetPortfolioConfM of
-                                                                                      Nothing -> lift $ putStrLn "No target portfolio found with that name"
-                                                                                      Just targetPortfolioConf -> let sugDiff = rebalance curPort (targetPortfolio targetPortfolioConf) in lift $ print sugDiff
-processOptions Options{optArgument=Configure New, optConfigPath, optPortfolioName} = lift $ promptNewConfig >>= writeConfig optConfigPath
+processOptions o@Options{optArgument=Rebalance, optConfigPath} = do conf <- readConfig optConfigPath
+                                                                    curPort <- lift $ promptPortfolio Dollar
+                                                                    let optPortfolioName = handleDefault conf o
+                                                                    let targetPortfolioConfM = getPortfolioByName optPortfolioName conf
+                                                                    case targetPortfolioConfM of
+                                                                      Nothing -> lift $ putStrLn "No target portfolio found with that name"
+                                                                      Just targetPortfolioConf -> let sugDiff = rebalance curPort (targetPortfolio targetPortfolioConf) in lift $ print sugDiff
+processOptions Options{optArgument=Configure New, optConfigPath} = lift $ promptNewConfig >>= writeConfig optConfigPath
 processOptions Options{optArgument=Configure Update, optConfigPath, optPortfolioName} = lift $ promptUpdateConfig optConfigPath optPortfolioName  >>= writeConfig optConfigPath
 processOptions Options{optArgument=Configure Show, optConfigPath} = readConfig optConfigPath >>= lift . B.putStrLn . encodePretty
-processOptions Options{optArgument=Buy amt, optConfigPath, optPortfolioName} = do
+processOptions o@Options{optArgument=Buy amt, optConfigPath} = do
   conf <- readConfig optConfigPath
+  let optPortfolioName = handleDefault conf o
   let targetPortfolioConfM = getPortfolioByName optPortfolioName conf
+  lift $ print . show $ amt
+  lift $ print . show $ maybe (-0.5) margin targetPortfolioConfM
   case targetPortfolioConfM of
     Nothing -> lift $ putStrLn "No target portfolio found with that name"
     Just targetPortfolioConf -> lift . print $ (amt * (1.0 + margin targetPortfolioConf)) *^ (targetPortfolio targetPortfolioConf)
-processOptions Options{optArgument=Sell amt, optConfigPath, optPortfolioName} = do
+processOptions o@Options{optArgument=Sell amt, optConfigPath} = do
   conf <- readConfig optConfigPath
+  let optPortfolioName = handleDefault conf o
   let targetPortfolioConfM = getPortfolioByName optPortfolioName conf
   case targetPortfolioConfM of
     Nothing -> lift $ putStrLn "No target portfolio found with that name"
     Just targetPortfolioConf -> lift . print $ neg $ (amt * (1.0 + margin targetPortfolioConf)) *^ (targetPortfolio targetPortfolioConf)
 
 main :: IO ()
-main = do { options <- execParser (info opts ( fullDesc
+main = do { options <- execParser (info optsParser ( fullDesc
                                       <> progDesc "Compute investment purchases for target portfolio"
                                       <> header "hello - a test for optparse-applicative" ))
           ; mResult <- runMaybeT $ processOptions options
